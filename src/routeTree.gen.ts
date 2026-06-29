@@ -13,10 +13,12 @@ import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as SourceDataRouteImport } from './routes/source-data'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as IntegrationHubRouteImport } from './routes/integration-hub'
 import { Route as GenieRouteImport } from './routes/genie'
 import { Route as FamilyRouteImport } from './routes/family'
 import { Route as DevicesRouteImport } from './routes/devices'
 import { Route as AlertsRouteImport } from './routes/alerts'
+import { Route as AdminIntegrationsRouteImport } from './routes/admin-integrations'
 import { Route as IndexRouteImport } from './routes/index'
 
 const TimelineRoute = TimelineRouteImport.update({
@@ -39,6 +41,11 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IntegrationHubRoute = IntegrationHubRouteImport.update({
+  id: '/integration-hub',
+  path: '/integration-hub',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const GenieRoute = GenieRouteImport.update({
   id: '/genie',
   path: '/genie',
@@ -59,6 +66,11 @@ const AlertsRoute = AlertsRouteImport.update({
   path: '/alerts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIntegrationsRoute = AdminIntegrationsRouteImport.update({
+  id: '/admin-integrations',
+  path: '/admin-integrations',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -67,10 +79,12 @@ const IndexRoute = IndexRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/admin-integrations': typeof AdminIntegrationsRoute
   '/alerts': typeof AlertsRoute
   '/devices': typeof DevicesRoute
   '/family': typeof FamilyRoute
   '/genie': typeof GenieRoute
+  '/integration-hub': typeof IntegrationHubRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/source-data': typeof SourceDataRoute
@@ -78,10 +92,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/admin-integrations': typeof AdminIntegrationsRoute
   '/alerts': typeof AlertsRoute
   '/devices': typeof DevicesRoute
   '/family': typeof FamilyRoute
   '/genie': typeof GenieRoute
+  '/integration-hub': typeof IntegrationHubRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/source-data': typeof SourceDataRoute
@@ -90,10 +106,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/admin-integrations': typeof AdminIntegrationsRoute
   '/alerts': typeof AlertsRoute
   '/devices': typeof DevicesRoute
   '/family': typeof FamilyRoute
   '/genie': typeof GenieRoute
+  '/integration-hub': typeof IntegrationHubRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/source-data': typeof SourceDataRoute
@@ -103,10 +121,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/admin-integrations'
     | '/alerts'
     | '/devices'
     | '/family'
     | '/genie'
+    | '/integration-hub'
     | '/reports'
     | '/settings'
     | '/source-data'
@@ -114,10 +134,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/admin-integrations'
     | '/alerts'
     | '/devices'
     | '/family'
     | '/genie'
+    | '/integration-hub'
     | '/reports'
     | '/settings'
     | '/source-data'
@@ -125,10 +147,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/admin-integrations'
     | '/alerts'
     | '/devices'
     | '/family'
     | '/genie'
+    | '/integration-hub'
     | '/reports'
     | '/settings'
     | '/source-data'
@@ -137,10 +161,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AdminIntegrationsRoute: typeof AdminIntegrationsRoute
   AlertsRoute: typeof AlertsRoute
   DevicesRoute: typeof DevicesRoute
   FamilyRoute: typeof FamilyRoute
   GenieRoute: typeof GenieRoute
+  IntegrationHubRoute: typeof IntegrationHubRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   SourceDataRoute: typeof SourceDataRoute
@@ -177,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/integration-hub': {
+      id: '/integration-hub'
+      path: '/integration-hub'
+      fullPath: '/integration-hub'
+      preLoaderRoute: typeof IntegrationHubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/genie': {
       id: '/genie'
       path: '/genie'
@@ -205,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AlertsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin-integrations': {
+      id: '/admin-integrations'
+      path: '/admin-integrations'
+      fullPath: '/admin-integrations'
+      preLoaderRoute: typeof AdminIntegrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -217,10 +257,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AdminIntegrationsRoute: AdminIntegrationsRoute,
   AlertsRoute: AlertsRoute,
   DevicesRoute: DevicesRoute,
   FamilyRoute: FamilyRoute,
   GenieRoute: GenieRoute,
+  IntegrationHubRoute: IntegrationHubRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   SourceDataRoute: SourceDataRoute,

@@ -13,6 +13,10 @@ import {
   Play,
   Download,
   HelpCircle,
+  Network,
+  Eye,
+  AlertTriangle,
+  ShieldCheck,
 } from "lucide-react";
 import { patient } from "@/lib/qb-data";
 import { FamilyMemberSelector } from "./FamilyMemberSelector";
@@ -21,6 +25,7 @@ import { PageTransition } from "./PageTransition";
 import { Onboarding } from "./Onboarding";
 import { PatientContextHeader } from "./PatientContextHeader";
 import { useFamilyContext } from "@/lib/family-context";
+import { useUserContext } from "@/lib/user-context";
 
 const navItems = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -29,6 +34,8 @@ const navItems = [
   { to: "/alerts", label: "Alerts", icon: BellRing, badge: 3 },
   { to: "/genie", label: "Genie AI", icon: Sparkles },
   { to: "/family", label: "Family", icon: Users },
+  { to: "/integration-hub", label: "Integration Hub", icon: Network },
+  { to: "/admin-integrations", label: "Admin Hub", icon: ShieldCheck },
   { to: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -40,12 +47,15 @@ const screenMeta: Record<string, { title: string; subtitle: string }> = {
   "/genie": { title: "Genie AI", subtitle: "Voice + text assistant for the patient" },
   "/family": { title: "Family Health", subtitle: "Manage health information for your family members" },
   "/settings": { title: "Settings", subtitle: "Notifications · thresholds · privacy · integrations" },
+  "/integration-hub": { title: "Integration Hub", subtitle: "Secure data exchange with EPIC FHIR, Cerner, labs & third-party APIs" },
+  "/admin-integrations": { title: "Admin Integration Hub", subtitle: "Configure providers, authentication, certificates, and data mappings" },
 };
 
 export function Layout({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const meta = screenMeta[path] ?? { title: "Quest Beyond", subtitle: "" };
   const { selectedMember } = useFamilyContext();
+  const userCtx = useUserContext();
   const [time, setTime] = useState("");
   const [demoOpen, setDemoOpen] = useState(false);
   const [exported, setExported] = useState(false);
@@ -176,6 +186,27 @@ export function Layout({ children }: { children: ReactNode }) {
           {/* Patient context header — updates on member switch */}
           <PatientContextHeader />
         </div>
+
+        {/* ── Family context viewing banner ─────────────────────────────────── */}
+        {userCtx.isFamilyView && (
+          <div className={`flex items-center gap-3 px-6 py-2 text-xs font-medium border-b ${
+            !userCtx.hasActiveConsent
+              ? "bg-rose-soft border-rose/20 text-rose"
+              : "bg-amber-soft border-amber/20 text-amber"
+          }`}>
+            {!userCtx.hasActiveConsent
+              ? <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              : <Eye className="h-3.5 w-3.5 shrink-0" />}
+            <span>
+              {!userCtx.hasActiveConsent
+                ? <>No active consent for <strong>{userCtx.contextSubjectName}</strong> — data sharing actions are disabled.</>
+                : <>Viewing data for <strong>{userCtx.contextSubjectName}</strong> ({userCtx.contextRelationship}){userCtx.isMinorContext ? " · Minor — guardian consent required" : ""}. Switch the selector above to return to primary patient view.</>}
+            </span>
+            <span className={`ml-auto qb-chip border text-[10px] font-semibold ${userCtx.subjectTagColor}`}>
+              {userCtx.subjectTag}
+            </span>
+          </div>
+        )}
 
         {/* Page content */}
         <main className="flex-1 bg-bg px-6 py-5">

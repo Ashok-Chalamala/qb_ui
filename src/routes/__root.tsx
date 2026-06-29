@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { FamilyProvider } from "@/lib/family-context";
+import { UserContextProvider } from "@/lib/user-context";
 import {
   Outlet,
   Link,
@@ -122,8 +123,10 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <FamilyProvider>
-        {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
+        <UserContextProvider>
+          {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
+          <Outlet />
+        </UserContextProvider>
       </FamilyProvider>
     </QueryClientProvider>
   );
