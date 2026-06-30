@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Layout } from "@/components/qb/Layout";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -13,8 +13,10 @@ import {
   FileText,
   Upload,
   Cpu,
+  Camera,
+  Share2,
 } from "lucide-react";
-import { initialFamilyMembers, initialReports } from "@/lib/qb-data";
+import { patient, initialFamilyMembers, initialReports } from "@/lib/qb-data";
 import type { FamilyMember, MetricEntry, WellbeingStatus, Relationship, BloodGroup, Gender } from "@/lib/qb-data";
 import { useFamilyContext } from "@/lib/family-context";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -24,6 +26,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DataSharingConsent } from "@/components/qb/DataSharingConsent";
+import { ConnectProviderWizard } from "@/components/qb/ConnectProviderWizard";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -75,6 +79,7 @@ const BLANK_MEMBER: Omit<FamilyMember, "id"> = {
   conditions: [], allergies: [], medications: [],
   healthNotes: "", wellbeingNotes: "", metrics: [],
   wellbeingStatus: "Good", lastUpdated: "just now", reportsCount: 0,
+  photo: undefined,
 };
 
 const BLANK_METRIC: Omit<MetricEntry, "id"> = {
@@ -86,6 +91,16 @@ const BLANK_METRIC: Omit<MetricEntry, "id"> = {
 const makeId = () => `fm${Date.now()}`;
 const makeMetricId = () => `m${Date.now()}`;
 const num = (v: string) => (v === "" ? undefined : Number(v));
+const SELF_MEMBER_ID = "self";
+
+function initials(name: string) {
+  return name
+    .split(" ")
+    .slice(0, 2)
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase();
+}
 
 // ── Route ──────────────────────────────────────────────────────────────────────
 
@@ -168,6 +183,7 @@ function MemberSheet({
   const [form, setForm] = useState<Omit<FamilyMember, "id">>(
     initial ? { ...initial } : { ...BLANK_MEMBER },
   );
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) setForm(initial ? { ...initial } : { ...BLANK_MEMBER });
@@ -175,6 +191,16 @@ function MemberSheet({
 
   const sf = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) =>
     setForm((p) => ({ ...p, [k]: v }));
+
+  const handlePhotoChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { alert("Photo must be under 2 MB."); return; }
+    const reader = new FileReader();
+    reader.onload = () => sf("photo", reader.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleSave = () => {
     if (!form.fullName.trim()) return;
@@ -192,6 +218,49 @@ function MemberSheet({
         </SheetHeader>
 
         <div className="space-y-6">
+          {/* Photo */}
+          <section>
+            <p className="qb-mono text-[10px] uppercase tracking-widest text-muted mb-3">Profile Photo <span className="normal-case">(optional)</span></p>
+            <div className="flex items-center gap-4">
+              <div className="relative grid h-16 w-16 shrink-0 place-items-center rounded-2xl overflow-hidden border border-border-soft bg-surface-2">
+                {form.photo ? (
+                  <img src={form.photo} alt="Profile" className="h-full w-full object-cover" />
+                ) : (
+                  <span className="qb-display text-lg font-bold text-muted">
+                    {form.fullName ? initials(form.fullName) : "?"}
+                  </span>
+                )}
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => photoInputRef.current?.click()}
+                  className="flex h-8 items-center gap-1.5 rounded-lg border border-border-strong px-3 text-xs text-muted hover:text-fg transition-colors"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  {form.photo ? "Change Photo" : "Upload Photo"}
+                </button>
+                {form.photo && (
+                  <button
+                    type="button"
+                    onClick={() => sf("photo", undefined)}
+                    className="flex h-8 items-center gap-1.5 rounded-lg border border-rose/30 px-3 text-xs text-rose hover:bg-rose-soft transition-colors"
+                  >
+                    <X className="h-3.5 w-3.5" /> Remove Photo
+                  </button>
+                )}
+                <p className="text-[10px] text-muted">JPG, PNG or WebP · Max 2 MB</p>
+              </div>
+            </div>
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={handlePhotoChange}
+            />
+          </section>
+
           {/* Personal */}
           <section>
             <p className="qb-mono text-[10px] uppercase tracking-widest text-muted mb-3">Personal Details</p>
@@ -414,10 +483,12 @@ function MiniMetric({ label, value, unit }: { label: string; value: string; unit
 
 function MemberCard({
   member,
+  isSelf,
   selected,
   onClick,
 }: {
   member: FamilyMember;
+  isSelf?: boolean;
   selected: boolean;
   onClick: () => void;
 }) {
@@ -445,19 +516,26 @@ function MemberCard({
       }`}
     >
       <div className="flex items-start gap-3">
-        <div className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-violet-soft text-2xl">
-          {RELATIONSHIP_ICON[member.relationship]}
+        <div className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl overflow-hidden ${isSelf ? "bg-teal-soft" : "bg-violet-soft text-2xl"}`}>
+          {member.photo ? (
+            <img src={member.photo} alt={member.fullName} className="h-full w-full object-cover" />
+          ) : isSelf ? (
+            <span className="qb-display text-sm font-semibold text-teal">{initials(member.fullName)}</span>
+          ) : (
+            RELATIONSHIP_ICON[member.relationship]
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="qb-display text-sm font-semibold truncate">{member.fullName}</span>
+            {isSelf && <span className="qb-chip border-teal/40 bg-teal-soft text-teal">You</span>}
             <span className={`qb-chip ${sc.chip}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${sc.dot} ${sc.pulse ? "qb-pulse" : ""}`} />
               {member.wellbeingStatus}
             </span>
           </div>
           <p className="text-[11px] text-muted mt-0.5">
-            {member.relationship} · {member.age} yrs · {member.gender}
+            {isSelf ? `Self · ${member.age} yrs · ${member.gender}` : `${member.relationship} · ${member.age} yrs · ${member.gender}`}
           </p>
           <div className="mt-1.5 flex flex-wrap gap-3 qb-mono text-[9px] text-muted">
             <span>🩸 {member.bloodGroup}</span>
@@ -473,13 +551,21 @@ function MemberCard({
         </div>
       </div>
 
-      {shownMetrics.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-border-soft grid grid-cols-3 gap-2">
-          {shownMetrics.map((m) => (
-            <MiniMetric key={m.label} label={m.label} value={m.value} unit={m.unit} />
-          ))}
-        </div>
-      )}
+      <div className="mt-3 min-h-[78px] border-t border-border-soft pt-3">
+        {shownMetrics.length > 0 ? (
+          <div className="grid grid-cols-3 gap-2">
+            {shownMetrics.map((m) => (
+              <MiniMetric key={m.label} label={m.label} value={m.value} unit={m.unit} />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-2">
+            <MiniMetric label="BP" value="—" unit="mmHg" />
+            <MiniMetric label="HR" value="—" unit="bpm" />
+            <MiniMetric label="SpO₂" value="—" unit="%" />
+          </div>
+        )}
+      </div>
     </button>
   );
 }
@@ -498,12 +584,14 @@ const METRIC_COLS = [
 
 function MemberDetail({
   member,
+  isSelf,
   onEdit,
   onDelete,
   onAddMetric,
   onUpdateNotes,
 }: {
   member: FamilyMember;
+  isSelf?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onAddMetric: (m: MetricEntry) => void;
@@ -523,8 +611,8 @@ function MemberDetail({
   const sc = STATUS_CFG[member.wellbeingStatus];
   const { setSelectedMember } = useFamilyContext();
   const navigate = useNavigate();
-  const memberReports = initialReports.filter(
-    (r) => r.ownerType === "FAMILY_MEMBER" && r.ownerId === member.id,
+  const memberReports = initialReports.filter((r) =>
+    isSelf ? r.ownerType === "PATIENT" : (r.ownerType === "FAMILY_MEMBER" && r.ownerId === member.id),
   );
 
   return (
@@ -538,19 +626,28 @@ function MemberDetail({
     >
       {/* Header */}
       <div className="flex flex-wrap items-start gap-4 mb-5">
-        <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-violet-soft text-3xl">
-          {RELATIONSHIP_ICON[member.relationship]}
+        <div className={`grid h-14 w-14 shrink-0 place-items-center rounded-2xl overflow-hidden ${isSelf ? "bg-teal-soft" : "bg-violet-soft text-3xl"}`}>
+          {member.photo ? (
+            <img src={member.photo} alt={member.fullName} className="h-full w-full object-cover" />
+          ) : isSelf ? (
+            <span className="qb-display text-base font-semibold text-teal">{initials(member.fullName)}</span>
+          ) : (
+            RELATIONSHIP_ICON[member.relationship]
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="qb-display text-lg font-semibold">{member.fullName}</h2>
+            {isSelf && <span className="qb-chip border-teal/40 bg-teal-soft text-teal">Self</span>}
             <span className={`qb-chip ${sc.chip}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${sc.dot} ${sc.pulse ? "qb-pulse" : ""}`} />
               {member.wellbeingStatus}
             </span>
           </div>
           <p className="text-sm text-muted mt-0.5">
-            {member.relationship} · {member.age} yrs · {member.gender} · Blood Group {member.bloodGroup}
+            {isSelf
+              ? `Self · ${member.age} yrs · ${member.gender} · Blood Group ${member.bloodGroup}`
+              : `${member.relationship} · ${member.age} yrs · ${member.gender} · Blood Group ${member.bloodGroup}`}
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
@@ -560,25 +657,33 @@ function MemberDetail({
           >
             <Pencil className="h-3 w-3" /> Edit
           </button>
-          <button
-            onClick={onDelete}
-            className="flex h-8 items-center gap-1.5 rounded-lg border border-rose/30 px-3 text-xs text-rose hover:bg-rose-soft"
-          >
-            <Trash2 className="h-3 w-3" /> Remove
-          </button>
+          {!isSelf && (
+            <button
+              onClick={onDelete}
+              className="flex h-8 items-center gap-1.5 rounded-lg border border-rose/30 px-3 text-xs text-rose hover:bg-rose-soft"
+            >
+              <Trash2 className="h-3 w-3" /> Remove
+            </button>
+          )}
         </div>
       </div>
 
       {/* Quick Actions */}
       <div className="flex flex-wrap gap-2 mb-5 pb-4 border-b border-border-soft">
         <button
-          onClick={() => { setSelectedMember(member); navigate({ to: "/source-data" }); }}
+          onClick={() => {
+            setSelectedMember(isSelf ? null : member);
+            navigate({ to: "/source-data", search: { tab: "reports" } });
+          }}
           className="flex h-8 items-center gap-1.5 rounded-lg bg-violet-soft border border-violet/20 px-3 text-xs font-medium text-violet hover:bg-violet/20 transition-colors"
         >
           <Upload className="h-3 w-3" /> Upload Report
         </button>
         <button
-          onClick={() => { setSelectedMember(member); navigate({ to: "/source-data" }); }}
+          onClick={() => {
+            setSelectedMember(isSelf ? null : member);
+            navigate({ to: "/source-data", search: { tab: "devices" } });
+          }}
           className="flex h-8 items-center gap-1.5 rounded-lg bg-teal-soft border border-teal/20 px-3 text-xs font-medium text-teal hover:bg-teal/20 transition-colors"
         >
           <Cpu className="h-3 w-3" /> Add Device
@@ -609,6 +714,7 @@ function MemberDetail({
             <TabsTrigger value="devices" className="text-xs">Devices</TabsTrigger>
             <TabsTrigger value="wearables" className="text-xs">Wearables</TabsTrigger>
             <TabsTrigger value="notes" className="text-xs">Notes</TabsTrigger>
+            <TabsTrigger value="provider-sync" className="text-xs">Provider Sync</TabsTrigger>
           </TabsList>
         </div>
 
@@ -759,7 +865,10 @@ function MemberDetail({
               <FileText className="h-10 w-10 text-muted opacity-25" />
               <p className="text-sm text-muted">No reports uploaded for {member.fullName}.</p>
               <button
-                onClick={() => { setSelectedMember(member); navigate({ to: "/source-data" }); }}
+                onClick={() => {
+                  setSelectedMember(isSelf ? null : member);
+                  navigate({ to: "/source-data", search: { tab: "reports" } });
+                }}
                 className="flex h-8 items-center gap-1.5 rounded-lg border border-violet/30 px-3 text-xs text-violet hover:bg-violet-soft"
               >
                 <Upload className="h-3.5 w-3.5" /> Upload Report
@@ -794,15 +903,17 @@ function MemberDetail({
         <TabsContent value="devices">
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <Cpu className="h-10 w-10 text-muted opacity-25" />
-            <h3 className="font-semibold text-sm">No Devices Linked</h3>
+            <h3 className="font-semibold text-sm">{isSelf ? "Manage Connected Devices" : "No Devices Linked"}</h3>
             <p className="text-xs text-muted max-w-xs">
-              Medical devices and sensors are linked to the primary patient account. Device sharing across family members is coming soon.
+              {isSelf
+                ? "View and manage connected devices for your primary patient account."
+                : "Medical devices and sensors are linked to the primary patient account. Device sharing across family members is coming soon."}
             </p>
             <button
-              onClick={() => navigate({ to: "/source-data" })}
+              onClick={() => navigate({ to: "/source-data", search: { tab: "devices" } })}
               className="flex h-8 items-center gap-1.5 rounded-lg border border-teal/30 px-3 text-xs text-teal hover:bg-teal-soft"
             >
-              <Cpu className="h-3.5 w-3.5" /> View Primary Devices
+              <Cpu className="h-3.5 w-3.5" /> {isSelf ? "Open Devices" : "View Primary Devices"}
             </button>
           </div>
         </TabsContent>
@@ -817,6 +928,35 @@ function MemberDetail({
             </p>
           </div>
         </TabsContent>
+
+        {/* ── PROVIDER SYNC ── */}
+        <TabsContent value="provider-sync">
+          <Tabs defaultValue="sharing" className="w-full">
+            <TabsList className="h-9 bg-surface-2 mb-4">
+              <TabsTrigger value="sharing" className="text-xs gap-1.5">
+                <Share2 className="h-3.5 w-3.5" />
+                Sharing History
+              </TabsTrigger>
+              <TabsTrigger value="share-report" className="text-xs gap-1.5">
+                <Plus className="h-3.5 w-3.5" />
+                Share Report
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Sharing History */}
+            <TabsContent value="sharing">
+              <DataSharingConsent />
+            </TabsContent>
+
+            {/* Share Report */}
+            <TabsContent value="share-report">
+              <ConnectProviderWizard
+                onComplete={() => {}}
+                onCancel={() => {}}
+              />
+            </TabsContent>
+          </Tabs>
+        </TabsContent>
       </Tabs>
     </motion.div>
   );
@@ -827,19 +967,40 @@ function MemberDetail({
 function Family() {
   const { setSelectedMember } = useFamilyContext();
   const [members, setMembers] = useState<FamilyMember[]>(initialFamilyMembers);
-  const [selectedId, setSelectedId] = useState<string | null>(
-    initialFamilyMembers[0]?.id ?? null,
-  );
+  const [selfProfile, setSelfProfile] = useState<FamilyMember>(() => ({
+    id: SELF_MEMBER_ID,
+    fullName: patient.name,
+    relationship: "Other",
+    age: patient.age,
+    gender: "Female",
+    bloodGroup: "O+",
+    phone: "+1 (555) 912-3456",
+    email: "sarah.martinez@email.com",
+    emergencyContact: "Carlos Martinez · +1 (555) 234-5678",
+    conditions: [patient.condition],
+    allergies: [],
+    medications: ["Metformin 500mg"],
+    healthNotes: "Primary patient context. Continue routine monitoring and care plan follow-up.",
+    wellbeingNotes: "Symptoms and device trends are monitored continuously via connected sources.",
+    metrics: [],
+    wellbeingStatus: "Alert",
+    lastUpdated: "just now",
+    reportsCount: initialReports.filter((r) => r.ownerType === "PATIENT").length,
+  }));
+  const [selectedId, setSelectedId] = useState<string | null>(SELF_MEMBER_ID);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [editingMember, setEditingMember] = useState<FamilyMember | null>(null);
 
-  const selected = members.find((m) => m.id === selectedId) ?? null;
+  const visibleMembers = useMemo(() => [selfProfile, ...members], [selfProfile, members]);
+
+  const selected = visibleMembers.find((m) => m.id === selectedId) ?? null;
+  const isSelectedSelf = selected?.id === SELF_MEMBER_ID;
 
   // Sync local card selection with global FamilyContext so that Source Data,
   // Reports, and Genie automatically scope to the chosen family member.
   const selectMember = (id: string | null) => {
     setSelectedId(id);
-    const m = id ? members.find((x) => x.id === id) ?? null : null;
+    const m = id && id !== SELF_MEMBER_ID ? members.find((x) => x.id === id) ?? null : null;
     setSelectedMember(m);
   };
 
@@ -847,6 +1008,10 @@ function Family() {
   const openEdit = (m: FamilyMember) => { setEditingMember(m); setSheetOpen(true); };
 
   const saveMember = (m: FamilyMember) => {
+    if (m.id === SELF_MEMBER_ID) {
+      setSelfProfile(m);
+      return;
+    }
     setMembers((prev) => {
       const idx = prev.findIndex((x) => x.id === m.id);
       return idx >= 0 ? prev.map((x) => (x.id === m.id ? m : x)) : [...prev, m];
@@ -858,11 +1023,19 @@ function Family() {
     const remaining = members.filter((m) => m.id !== id);
     setMembers(remaining);
     if (selectedId === id) {
-      selectMember(remaining.length > 0 ? remaining[0].id : null);
+      selectMember(SELF_MEMBER_ID);
     }
   };
 
   const addMetric = (memberId: string, metric: MetricEntry) => {
+    if (memberId === SELF_MEMBER_ID) {
+      setSelfProfile((prev) => ({
+        ...prev,
+        metrics: [metric, ...prev.metrics],
+        lastUpdated: "just now",
+      }));
+      return;
+    }
     setMembers((prev) =>
       prev.map((m) =>
         m.id === memberId
@@ -873,6 +1046,15 @@ function Family() {
   };
 
   const updateNotes = (memberId: string, healthNotes: string, wellbeingNotes: string) => {
+    if (memberId === SELF_MEMBER_ID) {
+      setSelfProfile((prev) => ({
+        ...prev,
+        healthNotes,
+        wellbeingNotes,
+        lastUpdated: "just now",
+      }));
+      return;
+    }
     setMembers((prev) =>
       prev.map((m) =>
         m.id === memberId ? { ...m, healthNotes, wellbeingNotes, lastUpdated: "just now" } : m,
@@ -880,10 +1062,10 @@ function Family() {
     );
   };
 
-  const goodCount    = members.filter((m) => m.wellbeingStatus === "Good").length;
-  const monitorCount = members.filter((m) => m.wellbeingStatus === "Monitor").length;
-  const alertCount   = members.filter((m) => m.wellbeingStatus === "Alert").length;
-  const totalMetrics = members.reduce((acc, m) => acc + m.metrics.length, 0);
+  const goodCount = visibleMembers.filter((m) => m.wellbeingStatus === "Good").length;
+  const monitorCount = visibleMembers.filter((m) => m.wellbeingStatus === "Monitor").length;
+  const alertCount = visibleMembers.filter((m) => m.wellbeingStatus === "Alert").length;
+  const totalMetrics = visibleMembers.reduce((acc, m) => acc + m.metrics.length, 0);
 
   return (
     <Layout>
@@ -893,7 +1075,7 @@ function Family() {
           <div className="qb-card flex-1 min-w-[140px] py-3 px-4">
             <div className="qb-mono text-[10px] uppercase tracking-widest text-muted mb-1">Members</div>
             <div className="flex items-end gap-2">
-              <span className="qb-display text-2xl font-bold">{members.length}</span>
+              <span className="qb-display text-2xl font-bold">{visibleMembers.length}</span>
               <span className="text-xs text-muted mb-0.5">tracked</span>
             </div>
           </div>
@@ -922,7 +1104,7 @@ function Family() {
         </div>
 
         {/* Member cards grid */}
-        {members.length === 0 ? (
+        {visibleMembers.length === 0 ? (
           <div className="qb-card flex flex-col items-center gap-3 py-16 text-center">
             <Users className="h-12 w-12 text-muted opacity-25" />
             <h3 className="qb-display text-base font-semibold">No family members yet</h3>
@@ -938,10 +1120,11 @@ function Family() {
           </div>
         ) : (
           <div className="flex gap-3 overflow-x-auto pb-2 sm:overflow-visible sm:pb-0 sm:grid sm:grid-cols-2 lg:grid-cols-3">
-            {members.map((m) => (
+            {visibleMembers.map((m) => (
               <div key={m.id} className="w-[272px] shrink-0 sm:w-auto sm:shrink">
                 <MemberCard
                   member={m}
+                  isSelf={m.id === SELF_MEMBER_ID}
                   selected={m.id === selectedId}
                   onClick={() => selectMember(selectedId === m.id ? null : m.id)}
                 />
@@ -955,7 +1138,7 @@ function Family() {
           <div className="flex items-center gap-2 px-1">
             <span className="qb-mono text-[10px] uppercase tracking-widest text-muted">Viewing</span>
             <span className="text-sm font-semibold text-violet">{selected.fullName}</span>
-            <span className="text-xs text-muted">· {selected.relationship}</span>
+            <span className="text-xs text-muted">· {isSelectedSelf ? "Self" : selected.relationship}</span>
           </div>
         )}
         <AnimatePresence mode="wait">
@@ -963,6 +1146,7 @@ function Family() {
             <MemberDetail
               key={selected.id}
               member={selected}
+              isSelf={isSelectedSelf}
               onEdit={() => openEdit(selected)}
               onDelete={() => deleteMember(selected.id)}
               onAddMetric={(metric) => addMetric(selected.id, metric)}

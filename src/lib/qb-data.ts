@@ -230,6 +230,8 @@ export interface FamilyMember {
   wellbeingStatus: WellbeingStatus;
   lastUpdated: string;
   reportsCount: number;
+  /** Optional base-64 data-URL photo (jpeg/png/webp, ≤ 2 MB) */
+  photo?: string;
 }
 
 export const initialFamilyMembers: FamilyMember[] = [

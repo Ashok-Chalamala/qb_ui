@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useMemo } from "react";
 import { Layout } from "@/components/qb/Layout";
 import { devicesData, initialReports } from "@/lib/qb-data";
@@ -8,9 +8,10 @@ import type { DeviceItem } from "@/components/qb/DevicesTab";
 import { ReportsTab } from "@/components/qb/ReportsTab";
 import { reportStorage } from "@/lib/report-storage";
 import { useFamilyContext } from "@/lib/family-context";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Cpu, FileText, RefreshCw, Upload } from "lucide-react";
 import type { ElementType } from "react";
+import { z } from "zod";
+import { cn } from "@/lib/utils";
 
 const RELATIONSHIP_ICON: Record<string, string> = {
   Father: "👨", Mother: "👩", Spouse: "💑", Son: "👦",
@@ -19,7 +20,12 @@ const RELATIONSHIP_ICON: Record<string, string> = {
 
 // ── Route ─────────────────────────────────────────────────────────────────────
 
+const sourceDataSearchSchema = z.object({
+  tab: z.enum(["devices", "reports"]).optional(),
+});
+
 export const Route = createFileRoute("/source-data")({
+  validateSearch: (search) => sourceDataSearchSchema.catch({ tab: "devices" }).parse(search),
   head: () => ({
     meta: [
       { title: "Source Data · Quest Beyond" },
@@ -69,9 +75,11 @@ function SummaryCard({
 // ── SourceData Page ───────────────────────────────────────────────────────────
 
 function SourceData() {
+  const { tab } = Route.useSearch();
   const { selectedMember, setSelectedMember } = useFamilyContext();
   const [devices, setDevices] = useState<DeviceItem[]>(devicesData);
   const [reports, setReports] = useState<MedicalReport[]>(initialReports);
+  const activeTab = tab === "reports" ? "reports" : "devices";
 
   // ── Derived values scoped to the selected member ──────────────────────────
 
@@ -161,31 +169,53 @@ function SourceData() {
           />
         </div>
 
-        {/* ── Tabs ── */}
-        <Tabs defaultValue="devices">
-          <TabsList className="h-10 bg-surface-2">
-            <TabsTrigger value="devices" className="text-xs gap-1.5">
-              <Cpu className="h-3.5 w-3.5" />
-              Devices
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="text-xs gap-1.5">
-              <FileText className="h-3.5 w-3.5" />
-              Reports
-            </TabsTrigger>
-          </TabsList>
+        {/* ── Top navigation tabs ── */}
+        <div
+          role="tablist"
+          aria-label="Source data sections"
+          className="flex w-full gap-1 rounded-2xl border border-border-soft bg-surface-2 p-1 shadow-sm max-[340px]:flex-col"
+        >
+          <Link
+            to="/devices"
+            role="tab"
+            aria-selected={activeTab === "devices"}
+            className={cn(
+              "flex h-10 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
+              activeTab === "devices"
+                ? "bg-teal text-white font-semibold shadow-sm"
+                : "bg-surface text-teal font-medium hover:bg-teal-soft",
+            )}
+          >
+            <Cpu className="h-4 w-4" />
+            Devices
+          </Link>
+          <Link
+            to="/reports"
+            role="tab"
+            aria-selected={activeTab === "reports"}
+            className={cn(
+              "flex h-10 flex-1 items-center justify-center gap-2 rounded-xl px-3 text-sm transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal/40 focus-visible:ring-offset-2 focus-visible:ring-offset-bg",
+              activeTab === "reports"
+                ? "bg-teal text-white font-semibold shadow-sm"
+                : "bg-surface text-teal font-medium hover:bg-teal-soft",
+            )}
+          >
+            <FileText className="h-4 w-4" />
+            Reports
+          </Link>
+        </div>
 
-          <TabsContent value="devices" className="mt-4">
+        <div className="mt-4">
+          {activeTab === "devices" ? (
             <DevicesTab devices={devices} onDevicesChange={setDevices} />
-          </TabsContent>
-
-          <TabsContent value="reports" className="mt-4">
+          ) : (
             <ReportsTab
               reports={reports}
               onAddReport={addReport}
               onDeleteReport={deleteReport}
             />
-          </TabsContent>
-        </Tabs>
+          )}
+        </div>
       </div>
     </Layout>
   );
