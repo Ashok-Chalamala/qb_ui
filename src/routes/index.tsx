@@ -1,7 +1,8 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, redirect } from "@tanstack/react-router";
 import { Layout } from "@/components/qb/Layout";
 import { accentClass, severityAccent } from "@/lib/qb-data";
 import { useMemberData } from "@/lib/family-context";
+import { getAuthUser, Role } from "@/lib/auth";
 import { AnimatedGauge } from "@/components/qb/AnimatedGauge";
 import { Sparkline } from "@/components/qb/Sparkline";
 import { GlucoseHeatmap } from "@/components/qb/GlucoseHeatmap";
@@ -17,6 +18,12 @@ import {
 import { Heart, Activity, Droplet, AlertTriangle, Sparkles, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/")({
+  beforeLoad: () => {
+    const user = getAuthUser();
+    if (user?.roles.includes(Role.ADMIN)) {
+      throw redirect({ to: "/admin-integrations" });
+    }
+  },
   head: () => ({
     meta: [
       { title: "Dashboard · Quest Beyond" },

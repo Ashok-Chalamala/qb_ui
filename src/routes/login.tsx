@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { login, isLoggedIn } from "@/lib/auth";
+import { login, isLoggedIn, getAuthUser, Role } from "@/lib/auth";
 import { Eye, EyeOff, ShieldCheck, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,10 @@ const DEMO_CREDENTIALS = [
   { label: "Admin", email: "admin@questbeyond.com", password: "Admin@2026" },
 ];
 
+function getPostLoginRoute(roles: Role[]): "/admin-integrations" | "/" {
+  return roles.includes(Role.ADMIN) ? "/admin-integrations" : "/";
+}
+
 function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -31,7 +35,8 @@ function LoginPage() {
 
   // Already logged in → redirect
   if (isLoggedIn()) {
-    void navigate({ to: "/" });
+    const user = getAuthUser();
+    void navigate({ to: getPostLoginRoute(user?.roles ?? []) });
     return null;
   }
 
@@ -48,7 +53,7 @@ function LoginPage() {
       const result = login(email, password);
       setLoading(false);
       if (result.success) {
-        void navigate({ to: "/" });
+        void navigate({ to: getPostLoginRoute(result.user?.roles ?? []) });
       } else {
         setError(result.error ?? "Login failed.");
       }
