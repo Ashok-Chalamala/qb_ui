@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
 import { login, isLoggedIn, getAuthUser, Role } from "@/lib/auth";
 import { Eye, EyeOff, ShieldCheck, ChevronRight } from "lucide-react";
@@ -6,6 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/login")({
+  beforeLoad: () => {
+    if (!isLoggedIn()) return;
+    const user = getAuthUser();
+    throw redirect({ to: getPostLoginRoute(user?.roles ?? []) });
+  },
   head: () => ({
     meta: [
       { title: "Sign In · Quest Beyond" },
@@ -33,13 +38,6 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Already logged in → redirect
-  if (isLoggedIn()) {
-    const user = getAuthUser();
-    void navigate({ to: getPostLoginRoute(user?.roles ?? []) });
-    return null;
-  }
-
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -53,7 +51,7 @@ function LoginPage() {
       const result = login(email, password);
       setLoading(false);
       if (result.success) {
-        void navigate({ to: getPostLoginRoute(result.user?.roles ?? []) });
+        void navigate({ to: getPostLoginRoute(result.user?.roles ?? []), replace: true });
       } else {
         setError(result.error ?? "Login failed.");
       }

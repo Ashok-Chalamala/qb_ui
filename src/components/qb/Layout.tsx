@@ -204,7 +204,7 @@ export function Layout({ children }: { children: ReactNode }) {
               </button>
               <button
                 title="Sign out"
-                onClick={() => { logout(); void navigate({ to: "/login" }); }}
+                onClick={() => { logout(); void navigate({ to: "/login", replace: true }); }}
                 className="grid h-8 w-8 place-items-center rounded-lg border border-border-strong bg-surface-2 text-muted transition-colors hover:border-rose/30 hover:bg-rose-soft hover:text-rose"
               >
                 <LogOut className="h-4 w-4" />
