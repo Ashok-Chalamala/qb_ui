@@ -5,6 +5,11 @@ export const patient = {
   condition: "Type 2 Diabetes",
   mrn: "00429",
   riskScore: "High",
+  metrics: [
+    { id: "pm1", date: "Jun 20, 2026", bloodPressure: "128/82", bloodSugar: 142, heartRate: 76, weight: 155, oxygenSaturation: 98, temperature: 98.2, notes: "Morning reading" },
+    { id: "pm2", date: "Jun 19, 2026", bloodPressure: "130/84", bloodSugar: 138, heartRate: 78, weight: 155, oxygenSaturation: 98, temperature: 98.1 },
+    { id: "pm3", date: "Jun 18, 2026", bloodPressure: "125/80", bloodSugar: 145, heartRate: 75, weight: 154, oxygenSaturation: 99, temperature: 98.3 },
+  ] as MetricEntry[],
 };
 
 export const dashboardData = {
@@ -91,8 +96,7 @@ export const devicesData = [
   { id: "d1", name: "Apple Watch Series 9", icon: "⌚", status: "Connected", lastSync: "2 min ago", dataTypes: "Steps, HR, Sleep, SpO2", accent: "teal" },
   { id: "d2", name: "Dexcom G7 CGM", icon: "🩸", status: "Connected", lastSync: "1 hour ago", dataTypes: "Continuous glucose", accent: "rose" },
   { id: "d3", name: "OneTouch Glucose Meter", icon: "🧪", status: "Needs Reconnect", lastSync: "3 days ago", dataTypes: "Manual glucose", accent: "amber" },
-  { id: "d4", name: "Symptom Logger", icon: "📝", status: "Active", lastSync: "Today", dataTypes: "Symptom logs", accent: "violet" },
-  { id: "d5", name: "SDOH Survey", icon: "🏠", status: "Active", lastSync: "Jun 10", dataTypes: "Social determinants", accent: "sky" },
+  { id: "d4", name: "SDOH Survey", icon: "🏠", status: "Active", lastSync: "Jun 10", dataTypes: "Social determinants", accent: "sky" },
 ];
 
 export const alertsData = [

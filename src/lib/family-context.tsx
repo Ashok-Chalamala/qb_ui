@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
 import { initialFamilyMembers, getMemberPageData, type MemberPageData } from "@/lib/qb-data";
 import type { FamilyMember } from "@/lib/qb-data";
 
@@ -7,6 +7,7 @@ import type { FamilyMember } from "@/lib/qb-data";
 export interface FamilyContextValue {
   /** All registered family members */
   members: FamilyMember[];
+  setMembers: Dispatch<SetStateAction<FamilyMember[]>>;
   /**
    * The currently selected family member.
    * `null` means the primary patient (Sarah Martinez) is the active context.
@@ -22,11 +23,12 @@ const FamilyContext = createContext<FamilyContextValue | null>(null);
 // ── Provider ──────────────────────────────────────────────────────────────────
 
 export function FamilyProvider({ children }: { children: ReactNode }) {
+  const [members, setMembers] = useState<FamilyMember[]>(initialFamilyMembers);
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
 
   const value = useMemo<FamilyContextValue>(
-    () => ({ members: initialFamilyMembers, selectedMember, setSelectedMember }),
-    [selectedMember],
+    () => ({ members, setMembers, selectedMember, setSelectedMember }),
+    [members, selectedMember],
   );
 
   return <FamilyContext.Provider value={value}>{children}</FamilyContext.Provider>;

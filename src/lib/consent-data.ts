@@ -15,10 +15,9 @@ export type SharingConfigStatus = "active" | "paused" | "expired" | "revoked";
 export type SharingDataType =
   | "demographics"
   | "reports"
-  | "clinical-notes"
-  | "lab-results"
-  | "prescriptions"
-  | "wearables";
+  | "devices"
+  | "notes"
+  | "metrics";
 
 export interface ShareableFamilyMember {
   id: string;
@@ -166,7 +165,7 @@ export const mockConsentRecords: ConsentRecord[] = [
     providerName: "Epic EHR – Main Hospital",
     grantedBy: "user-sarah",
     grantedByName: "Sarah Martinez",
-    dataTypes: ["demographics", "lab-results", "clinical-notes"],
+    dataTypes: ["demographics", "reports", "devices"],
     validFrom: "2026-01-15T00:00:00Z",
     validTo: "2027-01-15T00:00:00Z",
     status: "active",
@@ -254,7 +253,7 @@ export const mockSharingConfigs: SharingConfig[] = [
     subjectName: "Sarah Martinez",
     providerId: "int-001",
     providerName: "Epic EHR – Main Hospital",
-    dataTypes: ["demographics", "lab-results", "clinical-notes"],
+    dataTypes: ["demographics", "reports", "devices"],
     mode: "real-time",
     frequency: "immediate",
     triggers: ["new-lab", "new-report"],
@@ -312,12 +311,11 @@ export const SHARING_DATA_TYPES: {
   description: string;
   fhirResource: string;
 }[] = [
-  { value: "demographics",    label: "Patient Demographics", icon: "👤", description: "Name, DOB, gender, address, contact",               fhirResource: "Patient" },
-  { value: "reports",         label: "Reports",              icon: "📋", description: "PDF reports, discharge summaries, imaging",         fhirResource: "DocumentReference" },
-  { value: "clinical-notes",  label: "Clinical Notes",       icon: "🩺", description: "SOAP notes, progress notes, encounter summaries",    fhirResource: "Composition" },
-  { value: "lab-results",     label: "Lab Results",          icon: "🧪", description: "Blood panels, urinalysis, cultures, HbA1c",          fhirResource: "DiagnosticReport / Observation" },
-  { value: "prescriptions",   label: "Prescriptions",        icon: "💊", description: "Medication orders, dosage, refill history",          fhirResource: "MedicationRequest" },
-  { value: "wearables",       label: "Wearable Data",        icon: "⌚", description: "Heart rate, steps, sleep, SpO2, blood glucose",     fhirResource: "Observation (Panel)" },
+  { value: "demographics",  label: "Patient Demographics",      icon: "👤", description: "Name, DOB, gender, address, contact",                                                  fhirResource: "Patient" },
+  { value: "reports",        label: "Reports",                   icon: "📋", description: "PDF reports, discharge summaries, imaging",                                       fhirResource: "DocumentReference" },
+  { value: "devices",        label: "Health Tracking Devices",   icon: "📲", description: "Glucose monitors, blood pressure monitors, fitness trackers, smart watches",     fhirResource: "Device / Observation" },
+  { value: "notes",          label: "Notes",                     icon: "📝", description: "User-entered or uploaded notes",                                                  fhirResource: "Composition" },
+  { value: "metrics",        label: "Metrics",                   icon: "📊", description: "Blood glucose, blood pressure, weight, BMI, heart rate",                        fhirResource: "Observation" },
 ];
 
 // ── FHIR Sample Payloads ──────────────────────────────────────────────────────

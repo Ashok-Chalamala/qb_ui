@@ -161,6 +161,23 @@ const BLANK_UPLOAD: UploadFormState = {
   notes: "",
 };
 
+type SymptomNote = {
+  id: string;
+  ownerType: ReportOwnerType;
+  ownerId?: string;
+  recordedAt: string;
+  symptoms: string;
+  savedAt: string;
+};
+
+const makeSymptomId = () => `s${Date.now()}`;
+
+function toDateTimeLocal(iso = new Date().toISOString()) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 function UploadDialog({
   open,
   onClose,
@@ -1116,6 +1133,149 @@ function FamilyMemberView({
   );
 }
 
+function SymptomLoggerSection({
+  entries,
+  ownerLabel,
+  defaultOwnerType,
+  defaultOwnerId,
+  onAdd,
+  onDelete,
+}: {
+  entries: SymptomNote[];
+  ownerLabel: string;
+  defaultOwnerType: ReportOwnerType;
+  defaultOwnerId?: string;
+  onAdd: (entry: Omit<SymptomNote, "id" | "savedAt">) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [recordedAt, setRecordedAt] = useState(toDateTimeLocal());
+  const [symptoms, setSymptoms] = useState("");
+
+  const resetForm = () => {
+    setRecordedAt(toDateTimeLocal());
+    setSymptoms("");
+  };
+
+  const save = () => {
+    if (!symptoms.trim()) return;
+    onAdd({
+      ownerType: defaultOwnerType,
+      ownerId: defaultOwnerType === "FAMILY_MEMBER" ? defaultOwnerId : undefined,
+      recordedAt: new Date(recordedAt).toISOString(),
+      symptoms: symptoms.trim(),
+    });
+    setOpen(false);
+    resetForm();
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <StatCard label="Symptom Entries" value={entries.length} accent="violet" />
+        <StatCard
+          label="Latest Entry"
+          value={entries[0] ? new Date(entries[0].recordedAt).toLocaleString("en-US") : "—"}
+          accent="sky"
+        />
+        <button
+          onClick={() => setOpen(true)}
+          className="ml-auto flex h-10 shrink-0 items-center gap-2 rounded-xl bg-violet px-4 text-xs font-medium text-bg hover:bg-violet/90"
+        >
+          <Plus className="h-4 w-4" /> Add Symptom Note
+        </button>
+      </div>
+
+      {entries.length === 0 ? (
+        <div className="qb-card flex flex-col items-center gap-3 py-14 text-center">
+          <FileText className="h-10 w-10 text-muted opacity-25" />
+          <h3 className="qb-display text-sm font-semibold">No symptom notes yet</h3>
+          <p className="max-w-xs text-xs text-muted">
+            Create a notepad entry for {ownerLabel} with date/time and symptom details.
+          </p>
+          <button
+            onClick={() => setOpen(true)}
+            className="mt-1 flex h-9 items-center gap-2 rounded-xl border border-violet/30 px-4 text-xs text-violet hover:bg-violet-soft"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add First Entry
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {entries.map((entry) => (
+            <div key={entry.id} className="qb-card">
+              <div className="flex items-start gap-3">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-soft text-violet">📝</div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="qb-mono text-[10px] uppercase tracking-widest text-muted">
+                      {new Date(entry.recordedAt).toLocaleString("en-US")}
+                    </div>
+                    <button
+                      onClick={() => onDelete(entry.id)}
+                      className="flex h-7 items-center gap-1.5 rounded-lg border border-border-strong bg-surface-2 px-2.5 text-[11px] text-muted hover:border-rose/30 hover:text-rose"
+                    >
+                      <Trash2 className="h-3 w-3" /> Delete
+                    </button>
+                  </div>
+                  <p className="mt-2 whitespace-pre-wrap text-sm text-fg">{entry.symptoms}</p>
+                  <p className="mt-2 qb-mono text-[10px] text-muted">
+                    Saved {new Date(entry.savedAt).toLocaleString("en-US")}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <Dialog open={open} onOpenChange={(o) => { if (!o) resetForm(); setOpen(o); }}>
+        <DialogContent className="sm:max-w-[560px] bg-surface border-border-soft">
+          <DialogHeader>
+            <DialogTitle className="qb-display text-base">Add Symptom Note</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <Label className="mb-1 block text-xs text-muted">Date & Time</Label>
+              <Input
+                type="datetime-local"
+                value={recordedAt}
+                onChange={(e) => setRecordedAt(e.target.value)}
+                className="h-9 text-sm"
+              />
+            </div>
+            <div>
+              <Label className="mb-1 block text-xs text-muted">Symptoms</Label>
+              <Textarea
+                value={symptoms}
+                onChange={(e) => setSymptoms(e.target.value)}
+                rows={6}
+                placeholder="Describe symptoms, severity, triggers, and relevant context..."
+                className="resize-none text-sm"
+              />
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end gap-2">
+            <button
+              onClick={() => { setOpen(false); resetForm(); }}
+              className="h-9 rounded-lg border border-border-strong px-4 text-xs text-muted hover:text-fg"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={save}
+              disabled={!symptoms.trim()}
+              className="h-9 rounded-lg bg-violet px-4 text-xs font-medium text-bg hover:bg-violet/90 disabled:opacity-40"
+            >
+              Save Symptom
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 // ── ReportsTab (main export) ──────────────────────────────────────────────────
 
 export function ReportsTab({
@@ -1149,13 +1309,25 @@ export function ReportsTab({
   if (selectedMember !== null) {
     return (
       <>
-        <FamilyMemberView
-          member={selectedMember}
-          reports={reports}
-          familyMembersMap={familyMembersMap}
-          onUpload={() => openUpload("FAMILY_MEMBER", selectedMember.id)}
-          onDelete={onDeleteReport}
-        />
+        <Tabs defaultValue="member-reports">
+          <TabsList className="mb-5 h-10 bg-surface-2">
+            <TabsTrigger value="member-reports" className="text-xs gap-1.5">
+              <FileText className="h-3.5 w-3.5" /> Reports
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="member-reports">
+            <FamilyMemberView
+              member={selectedMember}
+              reports={reports}
+              familyMembersMap={familyMembersMap}
+              onUpload={() => openUpload("FAMILY_MEMBER", selectedMember.id)}
+              onDelete={onDeleteReport}
+            />
+          </TabsContent>
+
+        </Tabs>
+
         <UploadDialog
           open={uploadOpen}
           onClose={() => setUploadOpen(false)}
@@ -1208,6 +1380,7 @@ export function ReportsTab({
             onDelete={onDeleteReport}
           />
         </TabsContent>
+
       </Tabs>
 
       <UploadDialog

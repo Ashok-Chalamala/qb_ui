@@ -9,7 +9,7 @@ export type IntegrationStatus = "Connected" | "Disconnected" | "Error" | "Pendin
 export type AuthType = "oauth2" | "api-key" | "mtls";
 export type OAuth2Flow = "client_credentials" | "authorization_code";
 export type SyncFrequency = "real-time" | "scheduled" | "event-based";
-export type DataType = "reports" | "clinical-notes" | "wearables" | "lab-results" | "prescriptions";
+export type DataType = "reports" | "devices" | "notes" | "metrics";
 export type ProviderType = "EPIC" | "Cerner" | "Custom API" | "Labcorp" | "Quest Diagnostics";
 export type Environment = "sandbox" | "production";
 export type TriggerType = "new-report" | "new-lab" | "new-prescription" | "daily-batch" | "on-demand";
@@ -124,7 +124,7 @@ export const mockIntegrations: Integration[] = [
     environment: "production",
     status: "Connected",
     lastSync: "2026-06-29T08:32:00Z",
-    dataTypes: ["reports", "clinical-notes", "lab-results"],
+    dataTypes: ["reports", "devices", "notes"],
     authType: "oauth2",
     baseUrl: "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4",
     apiVersion: "R4",
@@ -166,7 +166,7 @@ export const mockIntegrations: Integration[] = [
     environment: "sandbox",
     status: "Error",
     lastSync: "2026-06-28T14:10:00Z",
-    dataTypes: ["reports", "prescriptions"],
+    dataTypes: ["reports", "metrics"],
     authType: "oauth2",
     baseUrl: "https://fhir-ehr-code.cerner.com/r4/ec2458f2-1e24-41c8-b71b-0e701af7583d",
     apiVersion: "R4",
@@ -204,7 +204,7 @@ export const mockIntegrations: Integration[] = [
     environment: "production",
     status: "Connected",
     lastSync: "2026-06-29T06:00:05Z",
-    dataTypes: ["lab-results"],
+    dataTypes: ["metrics"],
     authType: "api-key",
     baseUrl: "https://api.labcorp.com/v2",
     apiVersion: "v2",
@@ -238,7 +238,7 @@ export const mockIntegrations: Integration[] = [
     environment: "production",
     status: "Disconnected",
     lastSync: null,
-    dataTypes: ["wearables"],
+    dataTypes: ["devices"],
     authType: "mtls",
     baseUrl: "https://gateway.wearable.internal/api/v1",
     apiVersion: "v1",
@@ -450,11 +450,10 @@ export function authLabel(type: AuthType): string {
 
 export function dataTypeLabel(type: DataType): string {
   const labels: Record<DataType, string> = {
-    "reports": "Reports",
-    "clinical-notes": "Clinical Notes",
-    "wearables": "Wearables",
-    "lab-results": "Lab Results",
-    "prescriptions": "Prescriptions",
+    "reports":  "Reports",
+    "devices":  "Health Tracking Devices",
+    "notes":    "Notes",
+    "metrics":  "Metrics",
   };
   return labels[type];
 }
@@ -493,11 +492,10 @@ export function formatTimestamp(iso: string | null): string {
 }
 
 export const DATA_TYPE_OPTIONS: { value: DataType; label: string; icon: string; description: string }[] = [
-  { value: "reports",        label: "Reports",        icon: "📋", description: "Clinical reports, summaries, and documents" },
-  { value: "clinical-notes", label: "Clinical Notes", icon: "🩺", description: "SOAP notes, progress notes, and encounter summaries" },
-  { value: "wearables",      label: "Wearable Data",  icon: "⌚", description: "Heart rate, steps, sleep, SpO2, and activity" },
-  { value: "lab-results",    label: "Lab Results",    icon: "🧪", description: "Blood panels, urinalysis, cultures, and pathology" },
-  { value: "prescriptions",  label: "Prescriptions",  icon: "💊", description: "Medication orders and refill history" },
+  { value: "reports",  label: "Reports",                 icon: "📋", description: "Clinical reports, summaries, and documents" },
+  { value: "devices",  label: "Health Tracking Devices", icon: "📲", description: "Glucose monitors, blood pressure monitors, fitness trackers, smart watches" },
+  { value: "notes",    label: "Notes",                   icon: "📝", description: "User-entered or uploaded notes" },
+  { value: "metrics",  label: "Metrics",                 icon: "📊", description: "Blood glucose, blood pressure, weight, BMI, heart rate" },
 ];
 
 export const PROVIDER_OPTIONS: { value: ProviderType; label: string; description: string; fhirVersion: string }[] = [

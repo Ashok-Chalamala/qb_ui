@@ -44,7 +44,7 @@ export function PatientContextHeader() {
   const avatarBg = isPatient ? "bg-teal-soft text-teal" : "bg-surface-3 text-muted";
 
   return (
-    <div className="flex flex-wrap items-center gap-3 border-b border-border-soft bg-surface px-6 py-2.5">
+    <div className="flex flex-wrap items-center gap-2 sm:gap-3 border-b border-border-soft bg-surface px-3 sm:px-6 py-2 sm:py-2.5">
       {/* Avatar + identity */}
       <div className="flex items-center gap-2.5">
         <div

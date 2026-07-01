@@ -70,13 +70,13 @@
   --border-soft:   #E2E8F0;
   --border-strong: #CBD5E1;
 
-  /* Primary — Sky blue (Apple Health / One Medical) */
-  --teal:  #0EA5E9;
-  --teal2: rgba(14, 165, 233, 0.10);
+  /* Primary brand — Apple system green */
+  --teal:  #34C759;
+  --teal2: #EAF9EF;
 
-  /* Warning */
-  --amber:  #F59E0B;
-  --amber2: rgba(245, 158, 11, 0.10);
+  /* Secondary accent — mustard */
+  --amber:  #D4A017;
+  --amber2: #FFF7E0;
 
   /* AI / Genie accent */
   --violet:  #8B5CF6;
@@ -86,13 +86,13 @@
   --rose:  #EF4444;
   --rose2: rgba(239, 68, 68, 0.10);
 
-  /* Informational / Primary dark */
-  --sky:  #0284C7;
-  --sky2: rgba(2, 132, 199, 0.10);
+  /* Primary hover / pressed range */
+  --sky:  #28A745;
+  --sky2: rgba(40, 167, 69, 0.12);
 
-  /* Success / In-range */
-  --lime:  #10B981;
-  --lime2: rgba(16, 185, 129, 0.10);
+  /* Legacy green accents remapped to mustard family */
+  --lime:  #BE8F12;
+  --lime2: rgba(255, 247, 224, 0.95);
 
   /* Typography */
   --white: #0F172A;   /* Primary text */
@@ -183,13 +183,13 @@
 
   /* ── Focus ring ──────────────────────────────────────────────────── */
   .qb-glow-teal {
-    box-shadow: 0 0 0 3px rgba(14,165,233,0.15);
+    box-shadow: 0 0 0 3px rgba(52,199,89,0.18);
   }
 
   /* ── Sidebar nav active ──────────────────────────────────────────── */
   .qb-nav-active {
-    background: rgba(14,165,233,0.08);
-    color: #0EA5E9;
+    background: rgba(52,199,89,0.10);
+    color: #34C759;
   }
 }
 

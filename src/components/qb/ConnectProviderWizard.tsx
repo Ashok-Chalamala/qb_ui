@@ -541,7 +541,7 @@ function SuccessStep({
 
       <button onClick={onDone}
         className="w-full flex items-center justify-center gap-2 rounded-xl border border-teal/30 bg-teal-soft py-3 text-sm font-semibold text-teal hover:bg-teal/20 transition-colors">
-        <CheckCircle className="h-4 w-4" /> Done — Back to Integration Hub
+        <CheckCircle className="h-4 w-4" /> Done
       </button>
     </div>
   );
@@ -622,7 +622,7 @@ export function ConnectProviderWizard({
         {step === 2 && provider && <VerifyIdentity state={state} update={update} provider={provider} />}
         {step === 3 && provider && <SelectData state={state} update={update} provider={provider} />}
         {step === 4 && provider && <ConsentStep state={state} update={update} provider={provider} subjectName={ctx.contextSubjectName} />}
-        {step === 5 && result && provider && <SuccessStep result={result} provider={provider} onDone={onComplete} />}
+        {step === 5 && result && provider && <SuccessStep result={result} provider={provider} onDone={() => { setStep(1); setState(INIT); setResult(null); }} />}
       </div>
 
       {/* Navigation */}

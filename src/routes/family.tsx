@@ -15,8 +15,9 @@ import {
   Cpu,
   Camera,
   Share2,
+  RefreshCw,
 } from "lucide-react";
-import { patient, initialFamilyMembers, initialReports } from "@/lib/qb-data";
+import { patient, initialReports, devicesData, accentClass } from "@/lib/qb-data";
 import type { FamilyMember, MetricEntry, WellbeingStatus, Relationship, BloodGroup, Gender } from "@/lib/qb-data";
 import { useFamilyContext } from "@/lib/family-context";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -28,6 +29,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataSharingConsent } from "@/components/qb/DataSharingConsent";
 import { ConnectProviderWizard } from "@/components/qb/ConnectProviderWizard";
+import {
+  listGeneralWellbeingLogs,
+  listSymptomsLogs,
+  type GeneralWellbeingLog,
+  type SymptomsLog,
+} from "@/lib/api/source-data-notes.functions";
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -100,6 +107,64 @@ function initials(name: string) {
     .map((n) => n[0])
     .join("")
     .toUpperCase();
+}
+
+// ── Device Status Badge ────────────────────────────────────────────────────────
+
+function statusAccent(status: string) {
+  if (status === "Needs Reconnect") return "rose";
+  if (status === "Pending") return "amber";
+  if (status === "Inactive" || status === "Active") return "violet";
+  return "teal";
+}
+
+function DeviceStatusBadge({ status }: { status: string }) {
+  const accent = statusAccent(status);
+  const a = accentClass[accent];
+
+  return (
+    <span className={`qb-chip border-${accent}/40 ${a.text}`}>
+      <span className={`h-1.5 w-1.5 rounded-full bg-current ${status === "Connected" ? "qb-pulse" : ""}`} />
+      {status}
+    </span>
+  );
+}
+
+// ── Device Card Display ────────────────────────────────────────────────────────
+
+function DeviceCardDisplay({
+  device,
+}: {
+  device: { id: string; name: string; icon: string; status: string; lastSync: string; dataTypes: string; accent: string };
+}) {
+  const accent = statusAccent(device.status);
+  const a = accentClass[accent];
+
+  return (
+    <div className="qb-card qb-card-hover">
+      <div className="flex items-start gap-4">
+        <div className={`grid h-12 w-12 shrink-0 place-items-center rounded-xl text-2xl ${a.bg}`}>
+          {device.icon}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="qb-display text-sm font-semibold">{device.name}</h3>
+            <DeviceStatusBadge status={device.status} />
+          </div>
+          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+            <div>
+              <div className="qb-mono text-[9px] uppercase tracking-widest text-muted">Last sync</div>
+              <div className="qb-mono text-muted-foreground">{device.lastSync}</div>
+            </div>
+            <div>
+              <div className="qb-mono text-[9px] uppercase tracking-widest text-muted">Data types</div>
+              <div className="truncate text-xs">{device.dataTypes}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Route ──────────────────────────────────────────────────────────────────────
@@ -588,25 +653,44 @@ function MemberDetail({
   onEdit,
   onDelete,
   onAddMetric,
-  onUpdateNotes,
 }: {
   member: FamilyMember;
   isSelf?: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onAddMetric: (m: MetricEntry) => void;
-  onUpdateNotes: (healthNotes: string, wellbeingNotes: string) => void;
 }) {
-  const [metricsOpen, setMetricsOpen] = useState(false);
-  const [healthNotes, setHealthNotes] = useState(member.healthNotes);
-  const [wellbeingNotes, setWellbeingNotes] = useState(member.wellbeingNotes);
-  const [notesSaved, setNotesSaved] = useState(false);
+  const [symptomsHistory, setSymptomsHistory] = useState<SymptomsLog[]>([]);
+  const [wellbeingHistory, setWellbeingHistory] = useState<GeneralWellbeingLog[]>([]);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
 
-  const saveNotes = () => {
-    onUpdateNotes(healthNotes, wellbeingNotes);
-    setNotesSaved(true);
-    setTimeout(() => setNotesSaved(false), 2000);
+  const formatDateTime = (iso: string) => {
+    const d = new Date(iso);
+    return `${d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    })} ${d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+    })}`;
   };
+
+  const loadHistory = async () => {
+    setIsLoadingHistory(true);
+    const [symptoms, wellbeing] = await Promise.all([
+      listSymptomsLogs(member.id),
+      listGeneralWellbeingLogs(member.id),
+    ]);
+    setSymptomsHistory(symptoms);
+    setWellbeingHistory(wellbeing);
+    setIsLoadingHistory(false);
+  };
+
+  useEffect(() => {
+    void loadHistory();
+  }, [member.id]);
+
 
   const sc = STATUS_CFG[member.wellbeingStatus];
   const { setSelectedMember } = useFamilyContext();
@@ -668,27 +752,7 @@ function MemberDetail({
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-2 mb-5 pb-4 border-b border-border-soft">
-        <button
-          onClick={() => {
-            setSelectedMember(isSelf ? null : member);
-            navigate({ to: "/source-data", search: { tab: "reports" } });
-          }}
-          className="flex h-8 items-center gap-1.5 rounded-lg bg-violet-soft border border-violet/20 px-3 text-xs font-medium text-violet hover:bg-violet/20 transition-colors"
-        >
-          <Upload className="h-3 w-3" /> Upload Report
-        </button>
-        <button
-          onClick={() => {
-            setSelectedMember(isSelf ? null : member);
-            navigate({ to: "/source-data", search: { tab: "devices" } });
-          }}
-          className="flex h-8 items-center gap-1.5 rounded-lg bg-teal-soft border border-teal/20 px-3 text-xs font-medium text-teal hover:bg-teal/20 transition-colors"
-        >
-          <Cpu className="h-3 w-3" /> Add Device
-        </button>
-      </div>
+
 
       {/* Tabs */}
       <Tabs defaultValue="overview">
@@ -712,9 +776,7 @@ function MemberDetail({
               )}
             </TabsTrigger>
             <TabsTrigger value="devices" className="text-xs">Devices</TabsTrigger>
-            <TabsTrigger value="wearables" className="text-xs">Wearables</TabsTrigger>
             <TabsTrigger value="notes" className="text-xs">Notes</TabsTrigger>
-            <TabsTrigger value="provider-sync" className="text-xs">Provider Sync</TabsTrigger>
           </TabsList>
         </div>
 
@@ -743,28 +805,14 @@ function MemberDetail({
 
         {/* ── METRICS ── */}
         <TabsContent value="metrics">
-          <div className="flex items-center justify-between mb-4">
-            <p className="qb-mono text-[10px] uppercase tracking-widest text-muted">
-              Health Metrics History · {member.metrics.length} {member.metrics.length === 1 ? "entry" : "entries"}
-            </p>
-            <button
-              onClick={() => setMetricsOpen(true)}
-              className="flex h-8 items-center gap-1.5 rounded-lg bg-teal px-3 text-xs font-medium text-bg hover:bg-teal/90"
-            >
-              <Plus className="h-3.5 w-3.5" /> Log Metrics
-            </button>
-          </div>
+          <p className="qb-mono text-[10px] uppercase tracking-widest text-muted mb-4">
+            Health Metrics History · {member.metrics.length} {member.metrics.length === 1 ? "entry" : "entries"}
+          </p>
 
           {member.metrics.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-12 text-center">
               <Activity className="h-10 w-10 text-muted opacity-25" />
               <p className="text-sm text-muted">No metrics logged yet.</p>
-              <button
-                onClick={() => setMetricsOpen(true)}
-                className="flex h-8 items-center gap-1.5 rounded-lg border border-teal/30 px-3 text-xs text-teal hover:bg-teal-soft"
-              >
-                <Plus className="h-3.5 w-3.5" /> Log First Entry
-              </button>
             </div>
           ) : (
             <div className="overflow-x-auto qb-scroll rounded-lg border border-border-soft">
@@ -804,57 +852,54 @@ function MemberDetail({
               </table>
             </div>
           )}
-
-          <MetricsDialog
-            open={metricsOpen}
-            onClose={() => setMetricsOpen(false)}
-            onSave={(m) => { onAddMetric(m); setMetricsOpen(false); }}
-          />
         </TabsContent>
 
         {/* ── NOTES ── */}
         <TabsContent value="notes">
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             <div>
-              <Label className="mb-2 block text-xs text-muted">Health Notes</Label>
-              <Textarea
-                value={healthNotes}
-                onChange={(e) => setHealthNotes(e.target.value)}
-                rows={7}
-                className="resize-none text-sm"
-                placeholder="Medical observations, patterns, concerns, appointment notes…"
-              />
+              <h3 className="qb-display text-sm font-semibold mb-3">Symptoms Log</h3>
+              <div className="rounded-lg border border-border-soft bg-surface-2 p-3">
+                <p className="qb-mono text-[10px] uppercase tracking-widest text-muted mb-3">History</p>
+                <div className="space-y-3">
+                  {isLoadingHistory ? (
+                    <p className="text-xs text-muted">Loading history...</p>
+                  ) : symptomsHistory.length === 0 ? (
+                    <p className="text-xs text-muted">No symptoms logged yet.</p>
+                  ) : (
+                    symptomsHistory.map((item) => (
+                      <div key={item.id} className="border-b border-border-soft pb-3 last:border-b-0 last:pb-0">
+                        <p className="text-xs font-medium">{formatDateTime(item.createdAt)}</p>
+                        <p className="text-[11px] text-muted mt-0.5">{item.createdBy || "Unknown User"}</p>
+                        <p className="text-xs mt-1 whitespace-pre-wrap">{item.note}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
+
             <div>
-              <Label className="mb-2 block text-xs text-muted">General Wellbeing Notes</Label>
-              <Textarea
-                value={wellbeingNotes}
-                onChange={(e) => setWellbeingNotes(e.target.value)}
-                rows={7}
-                className="resize-none text-sm"
-                placeholder="Mood, energy levels, sleep quality, activity, quality of life…"
-              />
+              <h3 className="qb-display text-sm font-semibold mb-3">Wellbeing Log</h3>
+              <div className="rounded-lg border border-border-soft bg-surface-2 p-3">
+                <p className="qb-mono text-[10px] uppercase tracking-widest text-muted mb-3">History</p>
+                <div className="space-y-3">
+                  {isLoadingHistory ? (
+                    <p className="text-xs text-muted">Loading history...</p>
+                  ) : wellbeingHistory.length === 0 ? (
+                    <p className="text-xs text-muted">No wellbeing notes logged yet.</p>
+                  ) : (
+                    wellbeingHistory.map((item) => (
+                      <div key={item.id} className="border-b border-border-soft pb-3 last:border-b-0 last:pb-0">
+                        <p className="text-xs font-medium">{formatDateTime(item.createdAt)}</p>
+                        <p className="text-[11px] text-muted mt-0.5">{item.createdBy || "Unknown User"}</p>
+                        <p className="text-xs mt-1 whitespace-pre-wrap">{item.note}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
-          </div>
-          <div className="mt-4 flex items-center gap-3">
-            <button
-              onClick={saveNotes}
-              className="h-9 rounded-lg bg-teal px-4 text-xs font-medium text-bg hover:bg-teal/90"
-            >
-              Save Notes
-            </button>
-            <AnimatePresence>
-              {notesSaved && (
-                <motion.span
-                  initial={{ opacity: 0, x: -4 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="text-xs text-lime"
-                >
-                  ✓ Saved
-                </motion.span>
-              )}
-            </AnimatePresence>
           </div>
         </TabsContent>
 
@@ -864,15 +909,7 @@ function MemberDetail({
             <div className="flex flex-col items-center gap-3 py-12 text-center">
               <FileText className="h-10 w-10 text-muted opacity-25" />
               <p className="text-sm text-muted">No reports uploaded for {member.fullName}.</p>
-              <button
-                onClick={() => {
-                  setSelectedMember(isSelf ? null : member);
-                  navigate({ to: "/source-data", search: { tab: "reports" } });
-                }}
-                className="flex h-8 items-center gap-1.5 rounded-lg border border-violet/30 px-3 text-xs text-violet hover:bg-violet-soft"
-              >
-                <Upload className="h-3.5 w-3.5" /> Upload Report
-              </button>
+
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -901,61 +938,37 @@ function MemberDetail({
 
         {/* ── DEVICES ── */}
         <TabsContent value="devices">
-          <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <Cpu className="h-10 w-10 text-muted opacity-25" />
-            <h3 className="font-semibold text-sm">{isSelf ? "Manage Connected Devices" : "No Devices Linked"}</h3>
-            <p className="text-xs text-muted max-w-xs">
-              {isSelf
-                ? "View and manage connected devices for your primary patient account."
-                : "Medical devices and sensors are linked to the primary patient account. Device sharing across family members is coming soon."}
-            </p>
-            <button
-              onClick={() => navigate({ to: "/source-data", search: { tab: "devices" } })}
-              className="flex h-8 items-center gap-1.5 rounded-lg border border-teal/30 px-3 text-xs text-teal hover:bg-teal-soft"
-            >
-              <Cpu className="h-3.5 w-3.5" /> {isSelf ? "Open Devices" : "View Primary Devices"}
-            </button>
-          </div>
-        </TabsContent>
+          {isSelf ? (
+            <div className="space-y-4">
+              <div>
+                <h2 className="qb-display text-lg font-semibold">Connected Devices</h2>
+                <p className="text-xs text-muted">
+                  {devicesData.length} sources streaming into Quest Beyond.
+                </p>
+              </div>
 
-        {/* ── WEARABLES ── */}
-        <TabsContent value="wearables">
-          <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <Activity className="h-10 w-10 text-muted opacity-25" />
-            <h3 className="font-semibold text-sm">No Wearables Linked</h3>
-            <p className="text-xs text-muted max-w-xs">
-              Wearables such as smartwatches and fitness trackers are currently linked to the primary patient. Multi-member wearable support is coming soon.
-            </p>
-          </div>
-        </TabsContent>
-
-        {/* ── PROVIDER SYNC ── */}
-        <TabsContent value="provider-sync">
-          <Tabs defaultValue="sharing" className="w-full">
-            <TabsList className="h-9 bg-surface-2 mb-4">
-              <TabsTrigger value="sharing" className="text-xs gap-1.5">
-                <Share2 className="h-3.5 w-3.5" />
-                Sharing History
-              </TabsTrigger>
-              <TabsTrigger value="share-report" className="text-xs gap-1.5">
-                <Plus className="h-3.5 w-3.5" />
-                Share Report
-              </TabsTrigger>
-            </TabsList>
-
-            {/* Sharing History */}
-            <TabsContent value="sharing">
-              <DataSharingConsent />
-            </TabsContent>
-
-            {/* Share Report */}
-            <TabsContent value="share-report">
-              <ConnectProviderWizard
-                onComplete={() => {}}
-                onCancel={() => {}}
-              />
-            </TabsContent>
-          </Tabs>
+              {devicesData.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-12 text-center">
+                  <Cpu className="h-10 w-10 text-muted opacity-25" />
+                  <p className="text-sm text-muted">No devices connected yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  {devicesData.map((d) => (
+                    <DeviceCardDisplay key={d.id} device={d} />
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-12 text-center">
+              <Cpu className="h-10 w-10 text-muted opacity-25" />
+              <h3 className="font-semibold text-sm">No Devices Linked</h3>
+              <p className="text-xs text-muted max-w-xs">
+                Medical devices and sensors are linked to the primary patient account. Device sharing across family members is coming soon.
+              </p>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </motion.div>
@@ -965,8 +978,7 @@ function MemberDetail({
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 function Family() {
-  const { setSelectedMember } = useFamilyContext();
-  const [members, setMembers] = useState<FamilyMember[]>(initialFamilyMembers);
+  const { members, setMembers, setSelectedMember } = useFamilyContext();
   const [selfProfile, setSelfProfile] = useState<FamilyMember>(() => ({
     id: SELF_MEMBER_ID,
     fullName: patient.name,
@@ -1041,23 +1053,6 @@ function Family() {
         m.id === memberId
           ? { ...m, metrics: [metric, ...m.metrics], lastUpdated: "just now" }
           : m,
-      ),
-    );
-  };
-
-  const updateNotes = (memberId: string, healthNotes: string, wellbeingNotes: string) => {
-    if (memberId === SELF_MEMBER_ID) {
-      setSelfProfile((prev) => ({
-        ...prev,
-        healthNotes,
-        wellbeingNotes,
-        lastUpdated: "just now",
-      }));
-      return;
-    }
-    setMembers((prev) =>
-      prev.map((m) =>
-        m.id === memberId ? { ...m, healthNotes, wellbeingNotes, lastUpdated: "just now" } : m,
       ),
     );
   };
@@ -1150,7 +1145,6 @@ function Family() {
               onEdit={() => openEdit(selected)}
               onDelete={() => deleteMember(selected.id)}
               onAddMetric={(metric) => addMetric(selected.id, metric)}
-              onUpdateNotes={(h, w) => updateNotes(selected.id, h, w)}
             />
           )}
         </AnimatePresence>

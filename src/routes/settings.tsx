@@ -97,16 +97,17 @@ function Toggle({ icon, label, desc, value, onChange }: { icon: React.ReactNode;
         <div className="qb-mono text-[10px] uppercase tracking-widest text-muted">{desc}</div>
       </div>
       <button
+        role="switch"
+        aria-checked={value}
         onClick={onChange}
-        className={`relative h-6 w-11 rounded-full transition-colors ${value ? "bg-teal" : "bg-surface-3"}`}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-fg transition-transform ${
-            value ? "translate-x-5" : "translate-x-0.5"
+        className={`relative h-6 w-11 rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal focus-visible:ring-offset-2 ${value ? "bg-teal" : "bg-surface-3 border border-border-soft"}`}
+>
+<span
+          className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-transform duration-200 ${
+            value ? "translate-x-5" : "translate-x-0"
           }`}
-          style={{ background: value ? "#03161a" : "#7B8CAA" }}
         />
-      </button>
+</button>
     </div>
   );
 }

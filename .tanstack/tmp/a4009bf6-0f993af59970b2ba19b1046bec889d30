@@ -13,7 +13,6 @@ import { Route as TimelineRouteImport } from './routes/timeline'
 import { Route as SourceDataRouteImport } from './routes/source-data'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as LoginRouteImport } from './routes/login'
 import { Route as GenieRouteImport } from './routes/genie'
 import { Route as FamilyRouteImport } from './routes/family'
 import { Route as DevicesRouteImport } from './routes/devices'
@@ -39,11 +38,6 @@ const SettingsRoute = SettingsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GenieRoute = GenieRouteImport.update({
@@ -84,7 +78,6 @@ export interface FileRoutesByFullPath {
   '/devices': typeof DevicesRoute
   '/family': typeof FamilyRoute
   '/genie': typeof GenieRoute
-  '/login': typeof LoginRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/source-data': typeof SourceDataRoute
@@ -97,7 +90,6 @@ export interface FileRoutesByTo {
   '/devices': typeof DevicesRoute
   '/family': typeof FamilyRoute
   '/genie': typeof GenieRoute
-  '/login': typeof LoginRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/source-data': typeof SourceDataRoute
@@ -111,7 +103,6 @@ export interface FileRoutesById {
   '/devices': typeof DevicesRoute
   '/family': typeof FamilyRoute
   '/genie': typeof GenieRoute
-  '/login': typeof LoginRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/source-data': typeof SourceDataRoute
@@ -126,7 +117,6 @@ export interface FileRouteTypes {
     | '/devices'
     | '/family'
     | '/genie'
-    | '/login'
     | '/reports'
     | '/settings'
     | '/source-data'
@@ -139,7 +129,6 @@ export interface FileRouteTypes {
     | '/devices'
     | '/family'
     | '/genie'
-    | '/login'
     | '/reports'
     | '/settings'
     | '/source-data'
@@ -152,7 +141,6 @@ export interface FileRouteTypes {
     | '/devices'
     | '/family'
     | '/genie'
-    | '/login'
     | '/reports'
     | '/settings'
     | '/source-data'
@@ -166,7 +154,6 @@ export interface RootRouteChildren {
   DevicesRoute: typeof DevicesRoute
   FamilyRoute: typeof FamilyRoute
   GenieRoute: typeof GenieRoute
-  LoginRoute: typeof LoginRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   SourceDataRoute: typeof SourceDataRoute
@@ -201,13 +188,6 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/genie': {
@@ -262,7 +242,6 @@ const rootRouteChildren: RootRouteChildren = {
   DevicesRoute: DevicesRoute,
   FamilyRoute: FamilyRoute,
   GenieRoute: GenieRoute,
-  LoginRoute: LoginRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   SourceDataRoute: SourceDataRoute,

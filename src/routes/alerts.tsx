@@ -10,7 +10,7 @@ const sevFilters = ["All", "Critical", "High", "Medium"] as const;
 export const Route = createFileRoute("/alerts")({
   head: () => ({
     meta: [
-      { title: "Alerts · Quest Beyond" },
+      { title: "Health Alerts Center · Quest Beyond" },
       { name: "description", content: "Severity-ranked patterns detected across patient-generated data." },
     ],
   }),
