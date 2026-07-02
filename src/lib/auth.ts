@@ -139,10 +139,46 @@ export interface LoginResult {
 }
 
 /**
- * Validates credentials against the mock store.
+ * Validates credentials against the FastAPI backend.
+ * Falls back to the local mock store if the API is unreachable.
  * On success, persists the AuthUser (no password) to sessionStorage.
- *
- * TODO(backend): Replace with POST /auth/login and map JWT → AuthUser.
+ */
+export async function loginAsync(email: string, password: string): Promise<LoginResult> {
+  const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000";
+  try {
+    const res = await fetch(`${API_URL}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      return { success: false, error: "Invalid email or password." };
+    }
+    const apiUser = await res.json() as AuthUser & { roles: string[] };
+    const authUser: AuthUser = {
+      id: apiUser.id,
+      email: apiUser.email,
+      fullName: apiUser.fullName,
+      mrn: apiUser.mrn,
+      condition: apiUser.condition,
+      age: apiUser.age,
+      roles: apiUser.roles as Role[],
+    };
+    try {
+      sessionStorage.setItem(AUTH_KEY, JSON.stringify(authUser));
+    } catch {
+      // sessionStorage might be unavailable (e.g., SSR/test env)
+    }
+    return { success: true };
+  } catch {
+    // API unreachable — fall back to local mock store
+    return login(email, password);
+  }
+}
+
+/**
+ * Validates credentials against the mock store (synchronous fallback).
+ * On success, persists the AuthUser (no password) to sessionStorage.
  */
 export function login(email: string, password: string): LoginResult {
   const trimmedEmail = email.trim().toLowerCase();

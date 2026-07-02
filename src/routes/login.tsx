@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, redirect } from "@tanstack/react-router";
 import { useState } from "react";
-import { login, isLoggedIn, getAuthUser, Role } from "@/lib/auth";
+import { loginAsync, isLoggedIn, getAuthUser, Role } from "@/lib/auth";
 import { Eye, EyeOff, ShieldCheck, ChevronRight } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,7 +38,7 @@ function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
@@ -46,16 +46,14 @@ function LoginPage() {
     if (!password) { setError("Password is required."); return; }
 
     setLoading(true);
-    // Simulate async (network latency feel)
-    setTimeout(() => {
-      const result = login(email, password);
-      setLoading(false);
-      if (result.success) {
-        void navigate({ to: getPostLoginRoute(result.user?.roles ?? []), replace: true });
-      } else {
-        setError(result.error ?? "Login failed.");
-      }
-    }, 400);
+    const result = await loginAsync(email, password);
+    setLoading(false);
+    if (result.success) {
+      const user = getAuthUser();
+      void navigate({ to: getPostLoginRoute(user?.roles ?? []), replace: true });
+    } else {
+      setError(result.error ?? "Login failed.");
+    }
   };
 
   const fillDemo = (cred: typeof DEMO_CREDENTIALS[number]) => {

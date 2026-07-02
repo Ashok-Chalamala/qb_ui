@@ -1,6 +1,9 @@
-import { createContext, useContext, useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { createContext, useContext, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { initialFamilyMembers, getMemberPageData, type MemberPageData } from "@/lib/qb-data";
 import type { FamilyMember } from "@/lib/qb-data";
+import { fetchPageData } from "@/lib/api/client";
+import { getAuthUser } from "@/lib/auth";
 
 // ── Context shape ─────────────────────────────────────────────────────────────
 
@@ -43,28 +46,29 @@ export function useFamilyContext(): FamilyContextValue {
 }
 
 // ── useMemberData ─────────────────────────────────────────────────────────────
-// Returns the full page-data payload for the currently selected family member.
-// Shows a 300ms loading state when the selection changes to allow smooth transitions.
+// Fetches the full page-data payload from the FastAPI backend.
+// Falls back to local mock data as initialData so first render is instant.
+// Uses keepPreviousData so switching members doesn't flash an empty state.
 
 export function useMemberData(): { data: MemberPageData; isLoading: boolean } {
   const { selectedMember } = useFamilyContext();
-  // Initialise with the correct member's data on first render (no flash)
-  const [data, setData] = useState<MemberPageData>(() => getMemberPageData(selectedMember));
-  const [isLoading, setIsLoading] = useState(false);
-  const prevMember = useRef(selectedMember);
+  const authUser = getAuthUser();
+  const patientId = authUser?.id ?? "patient-00429";
+  const memberId = selectedMember?.id;
 
-  useEffect(() => {
-    // Skip the effect if the member hasn't actually changed
-    if (prevMember.current === selectedMember) return;
-    prevMember.current = selectedMember;
+  const { data, isPlaceholderData, isFetching } = useQuery({
+    queryKey: ["page-data", patientId, memberId ?? "primary"] as const,
+    queryFn: () => fetchPageData(patientId, memberId),
+    // Use the local mock as the initial value — API result replaces it silently
+    initialData: () => getMemberPageData(selectedMember),
+    // While switching members keep showing the previous member's data
+    placeholderData: keepPreviousData,
+    staleTime: 60_000,
+  });
 
-    setIsLoading(true);
-    const t = setTimeout(() => {
-      setData(getMemberPageData(selectedMember));
-      setIsLoading(false);
-    }, 300);
-    return () => clearTimeout(t);
-  }, [selectedMember]);
-
-  return { data, isLoading };
+  return {
+    data,
+    // Show loading indicator only when transitioning between members
+    isLoading: isPlaceholderData && isFetching,
+  };
 }
